@@ -5,6 +5,7 @@ import { Button } from "@/components/Button";
 import { InputText } from "@/components/InputText";
 import clsx from "clsx";
 import { LogInIcon } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { toast } from "react-toastify";
 
@@ -49,8 +50,11 @@ export function LoginForm() {
 
         <Button type="submit" className="mt-4" disabled={isPending}>
           <LogInIcon />
-          Entrar
+          Log In
         </Button>
+        <p className="text-sm/tight">
+          <Link href="/user/new">Create my account</Link>
+        </p>
 
         {!!state.error && <p className="text-red-600">{state.error}</p>}
       </form>
