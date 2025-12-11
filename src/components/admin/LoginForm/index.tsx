@@ -2,6 +2,7 @@
 
 import { loginAction } from "@/actions/login/login-action";
 import { Button } from "@/components/Button";
+import { HoneypotInput } from "@/components/HoneyPotInput";
 import { InputText } from "@/components/InputText";
 import clsx from "clsx";
 import { LogInIcon } from "lucide-react";
@@ -72,6 +73,8 @@ export function LoginForm() {
           disabled={isPending}
           required
         />
+
+        <HoneypotInput />
 
         <Button disabled={isPending} type="submit" className="mt-4">
           <LogInIcon />

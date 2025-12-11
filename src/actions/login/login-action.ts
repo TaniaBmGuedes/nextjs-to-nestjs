@@ -6,6 +6,7 @@ import { asyncDelay } from "@/utils/async-delay";
 import { getZodErrorMessages } from "@/utils/get-zod-error-msgs";
 import { createLoginSessionFromApi } from "@/lib/login/manage-login";
 import { redirect } from "next/navigation";
+import { verifyHoneypotInput } from "@/utils/verify-honeypot";
 
 type LoginActionState = {
   email: string;
@@ -20,7 +21,14 @@ export async function loginAction(state: LoginActionState, formData: FormData) {
     };
   }
 
-  await asyncDelay(5000);
+  const isBot = await verifyHoneypotInput(formData, 5000);
+
+  if (isBot) {
+    return {
+      email: "",
+      errors: ["nice"],
+    };
+  }
 
   if (!(formData instanceof FormData)) {
     return {
