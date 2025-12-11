@@ -1,25 +1,26 @@
 "use server";
 
-import { verifyLoginSession } from "@/lib/login/manage-login";
-import { mkdir, writeFile } from "fs/promises";
-import { extname, resolve } from "path";
+import { getLoginSessionForApi } from "@/lib/login/manage-login";
+import { authenticatedApiRequest } from "@/utils/authenticated-api.-request";
 
 type UploadImageActionResult = {
   url: string;
   error: string;
 };
 
-export default async function uploadImageAction(
+export async function uploadImageAction(
   formData: FormData
 ): Promise<UploadImageActionResult> {
   const makeResult = ({ url = "", error = "" }) => ({ url, error });
-  const isAuthenticated = await verifyLoginSession();
+
+  const isAuthenticated = await getLoginSessionForApi();
+
   if (!isAuthenticated) {
-    return makeResult({ error: "Login again" });
+    return makeResult({ error: "Please log in again" });
   }
 
   if (!(formData instanceof FormData)) {
-    return makeResult({ error: "Invalided data" });
+    return makeResult({ error: "Invalid data" });
   }
 
   const file = formData.get("file");
@@ -28,31 +29,29 @@ export default async function uploadImageAction(
     return makeResult({ error: "Invalid file" });
   }
 
-  if (file.size > Number(process.env.IMAGE_UPLOAD_MAX_SIZE) || 921600) {
-    return makeResult({ error: "Image is so big" });
+  const uploadMaxSize =
+    Number(process.env.NEXT_PUBLIC_IMAGE_UPLOAD_MAX_SIZE) || 921600;
+  if (file.size > uploadMaxSize) {
+    return makeResult({ error: "File too large" });
   }
 
   if (!file.type.startsWith("image/")) {
-    return makeResult({ error: "Invalided image" });
+    return makeResult({ error: "Invalid image" });
   }
 
-  const imageExtension = extname(file.name);
-  const uniqueImageName = `${Date.now()}${imageExtension}`;
-  const uploadDir = process.env.IMAGE_UPLOAD_DIRECTORY || "uploads";
-  const uploadFullPath = resolve(process.cwd(), "public", uploadDir);
+  const uploadResponse = await authenticatedApiRequest<{ url: string }>(
+    `/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
 
-  const fileArrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(fileArrayBuffer);
+  if (!uploadResponse.success) {
+    return makeResult({ error: uploadResponse.errors[0] });
+  }
 
-  await mkdir(uploadFullPath, { recursive: true });
-
-  const fileFullPath = resolve(uploadFullPath, uniqueImageName);
-
-  await writeFile(fileFullPath, buffer);
-
-  const imgServerUrl =
-    process.env.IMAGE_SERVER_URL || "http://localhost:3000/uploads";
-  const url = `${imgServerUrl}/${uniqueImageName}`;
+  const url = `${process.env.IMAGE_SERVER_URL}${uploadResponse.data.url}`;
 
   return makeResult({ url });
 }

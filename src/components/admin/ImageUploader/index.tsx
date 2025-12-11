@@ -1,9 +1,9 @@
 "use client";
 
-import uploadImageAction from "@/actions/upload-action-image";
+import { uploadImageAction } from "@/actions/upload-action-image";
 import { Button } from "@/components/Button";
 import { ImageUpIcon } from "lucide-react";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { toast } from "react-toastify";
 
 type ImageUploaderProps = {
@@ -12,7 +12,7 @@ type ImageUploaderProps = {
 
 export function ImageUploader({ disabled = false }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, startTransition] = useTransition();
+  const [isUploading, setIsUploading] = useState(false);
   const [imageURl, setImgUrl] = useState("");
 
   function handleChooseFile() {
@@ -50,18 +50,25 @@ export function ImageUploader({ disabled = false }: ImageUploaderProps) {
     const formData = new FormData();
     formData.append("file", file);
 
-    startTransition(async () => {
-      const result = await uploadImageAction(formData);
-
-      if (result.error) {
-        toast.error(result.error);
-        fileInput.value = "";
+    setIsUploading(true);
+    uploadImageAction(formData)
+      .then((result) => {
+        if (result.error) {
+          toast.error(result.error);
+          setImgUrl("");
+          return;
+        }
+        setImgUrl(result.url);
+        toast.success("Image was sent");
+      })
+      .catch((err) => {
+        console.error("uploadImageAction failed", err);
+        toast.error("Failed to upload image");
         setImgUrl("");
-        return;
-      }
-      setImgUrl(result.url);
-      toast.success("Image was sent");
-    });
+      })
+      .finally(() => {
+        setIsUploading(false);
+      });
 
     fileInput.value = "";
   }

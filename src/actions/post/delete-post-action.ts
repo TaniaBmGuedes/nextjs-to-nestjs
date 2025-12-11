@@ -1,51 +1,58 @@
 "use server";
 
-import { drizzleDb } from "@/db/drizzle";
-import { postsTable } from "@/db/drizzle/schema";
-import { verifyLoginSession } from "@/lib/login/manage-login";
-import { postRepository } from "@/repositories/post";
-import { asyncDelay } from "@/utils/async-delay";
-import { logColor } from "@/utils/log-color";
-import { eq } from "drizzle-orm";
+import { getLoginSessionForApi } from "@/lib/login/manage-login";
+import { PublicPostForApiDto } from "@/lib/post/schemas";
+import { authenticatedApiRequest } from "@/utils/authenticated-api.-request";
 import { revalidateTag } from "next/cache";
 
 export async function deletePostAction(id: string) {
-  //TODO: check user login
-  await asyncDelay(2000);
-  logColor(String(id));
+  const isAuthenticated = await getLoginSessionForApi();
+
+  if (!isAuthenticated) {
+    return {
+      error: "Please log in again in another tab",
+    };
+  }
 
   if (!id || typeof id !== "string") {
     return {
       error: "Invalid data",
     };
   }
-  const isAuthenticated = await verifyLoginSession();
 
-  if (!isAuthenticated) {
+  const postResponse = await authenticatedApiRequest<PublicPostForApiDto>(
+    `/post/me/${id}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!postResponse.success) {
     return {
-      error: "Do login again in another tab",
+      error: "Error finding the post",
     };
   }
 
-  const post = await postRepository.findById(id).catch(() => undefined);
+  const deletePostResponse = await authenticatedApiRequest<PublicPostForApiDto>(
+    `/post/me/${id}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
-  if (!post) {
+  if (!deletePostResponse.success) {
     return {
-      error: "This post does not exist",
-    };
-  }
-
-  try {
-    await drizzleDb.delete(postsTable).where(eq(postsTable.id, id));
-  } catch (error) {
-    return {
-      error:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      error: "Error deleting the post",
     };
   }
 
   revalidateTag("posts", "");
-  revalidateTag(`post-${post.slug}`, "");
+  revalidateTag(`post-${postResponse.data.slug}`, "");
 
   return {
     error: "",

@@ -1,5 +1,5 @@
-import PostFeatured from "@/components/PostFeatured";
-import { PostList } from "@/components/PostList";
+import { PostFeatured } from "@/components/PostFeatured";
+import { PostsList } from "@/components/PostList";
 import { SpinLoader } from "@/components/SpinLoader";
 import { Suspense } from "react";
 
@@ -8,7 +8,7 @@ export default async function HomePage() {
     <>
       <Suspense fallback={<SpinLoader className="min-h-20 mb-16" />}>
         <PostFeatured />
-        <PostList />
+        <PostsList />
       </Suspense>
     </>
   );
